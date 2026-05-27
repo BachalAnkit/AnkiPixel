@@ -6,8 +6,6 @@
 'use strict';
 
 /* ────────────── LOGO BASE64 INJECTION ────────────── */
-// Logo is injected at runtime from the LOGO_DATA_URI global
-// (set by the inline script in index.html after build-step embeds it)
 function injectLogos() {
   const uri = window.__LOGO_URI__ || '';
   ['headerLogo','aboutLogo','footerLogo'].forEach(id => {
@@ -93,7 +91,6 @@ themeBtn.addEventListener('click', () => {
   }
   loop();
 
-  // Pause when tab hidden
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) cancelAnimationFrame(rafId);
     else loop();
@@ -114,7 +111,7 @@ function showToast(msg, type = 'info') {
 
 /* ────────────── STATE ────────────── */
 const state = {
-  files: [],      // { id, file, originalUrl, compressedBlob, compressedUrl }
+  files: [],
   counter: 0
 };
 
@@ -137,17 +134,39 @@ qualitySlider.addEventListener('input', () => {
 });
 
 /* ────────────── DROP ZONE ────────────── */
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+dropZone.addEventListener('click', () => {
+  fileInput.click();
+});
 
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    fileInput.click();
+  }
+});
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('drag-over');
+});
+
 dropZone.addEventListener('drop', e => {
   e.preventDefault();
   dropZone.classList.remove('drag-over');
   handleFiles([...e.dataTransfer.files]);
 });
-fileInput.addEventListener('change', () => handleFiles([...fileInput.files]));
+
+/* ────────────── FILE INPUT CHANGE ────────────── */
+fileInput.addEventListener('change', function(e) {
+  const files = e.target.files;
+  if (!files.length) return;
+  handleFiles([...files]);
+  e.target.value = ''; // reset AFTER processing so same file triggers again
+});
 
 /* ────────────── FILE HANDLING ────────────── */
 function handleFiles(files) {
@@ -162,7 +181,6 @@ function handleFiles(files) {
   toolPanel.classList.remove('hidden');
   toolPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   showToast(`${valid.length} image(s) added!`, 'success');
-  fileInput.value = '';
 }
 
 function addFile(file) {
@@ -200,7 +218,6 @@ function removeCard(id, card) {
     if (e.compressedUrl) URL.revokeObjectURL(e.compressedUrl);
     state.files.splice(idx, 1);
   }
-  card.style.animation = 'none';
   card.style.transition = 'opacity 0.25s, transform 0.25s';
   card.style.opacity = '0';
   card.style.transform = 'scale(0.95)';
@@ -275,7 +292,6 @@ compressAllBtn.addEventListener('click', async () => {
   compressAllBtn.disabled = true;
   compressAllBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Compressing…';
 
-  // Compress up to 4 at a time
   const chunkSize = 4;
   for (let i = 0; i < state.files.length; i += chunkSize) {
     const chunk = state.files.slice(i, i + chunkSize);
@@ -311,7 +327,11 @@ downloadAllBtn.addEventListener('click', async () => {
     ready.forEach(e => {
       zip.file('ankipixel_' + e.file.name, e.compressedBlob);
     });
-    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+    const blob = await zip.generateAsync({
+      type: 'blob',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 }
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -349,6 +369,7 @@ function formatBytes(bytes) {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
 }
+
 function truncate(str, max) {
   return str.length > max ? str.slice(0, max) + '…' : str;
 }
@@ -378,5 +399,4 @@ document.addEventListener('DOMContentLoaded', () => {
   injectLogos();
 });
 
-// Also call immediately in case DOMContentLoaded already fired
 injectLogos();
