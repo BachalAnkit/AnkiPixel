@@ -134,8 +134,8 @@ qualitySlider.addEventListener('input', () => {
 });
 
 /* ────────────── DROP ZONE ────────────── */
-dropZone.addEventListener('click', () => {
-  fileInput.click();
+fileInput.addEventListener('click', (e) => {
+  e.stopPropagation(); 
 });
 
 dropZone.addEventListener('keydown', e => {
